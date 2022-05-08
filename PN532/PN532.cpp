@@ -7,8 +7,8 @@
 /**************************************************************************/
 
 #include "Arduino.h"
-#include "PN532.h"
-#include "PN532_debug.h"
+#include <PN532.h>
+#include <PN532_debug.h>
 #include <string.h>
 
 #define HAL(func)   (_interface->func)
@@ -197,13 +197,7 @@ uint32_t PN532::writeRegister(uint16_t reg, uint8_t val)
         return 0;
     }
 
-    // read data packet
-    int16_t status = HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
-    if (0 > status) {
-        return 0;
-    }
-
-    return 1;
+    return 0 <= HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
 }
 
 /**************************************************************************/
@@ -307,7 +301,7 @@ bool PN532::SAMConfig(void)
     if (HAL(writeCommand)(pn532_packetbuffer, 4))
         return false;
 
-    return (0 < HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
+    return (0 <= HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
 }
 
 /**************************************************************************/
@@ -350,7 +344,52 @@ bool PN532::setPassiveActivationRetries(uint8_t maxRetries)
     if (HAL(writeCommand)(pn532_packetbuffer, 5))
         return 0x0;  // no ACK
 
-    return (0 < HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
+    return (0 <= HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
+}
+
+/**************************************************************************/
+/*!
+    Sets the fRetryTimeout uint8_t of the RFConfiguration register
+
+    @param  iTimeout    page 102 user manual PN532
+                        In case n = 0 No timeout
+                        In case 1 ≤ n ≤ 16 T ( µs ) = 100 × 2 ( n − 1 )
+
+                        Table 17. Timings definition for RFConfiguration command
+                        Byte Value (n) Timeout Value
+                        0x00           no timeout
+                        0x01           100 µs
+                        0x02           200 µs
+                        0x03           400 µs
+                        0x04           800 µs
+                        0x05           1.6 ms
+                        0x06           3.2 ms
+                        0x07           6.4 ms
+                        0x08           12.8 ms
+                        0x09           25.6 ms
+                        0x0A           51.2 ms
+                        0x0B           102.4 ms
+                        0x0C           204.8 ms
+                        0x0D           409.6 ms
+                        0x0E           819.2 ms
+                        0x0F           1.64 sec
+                        0x10           3.28 sec
+
+    @returns true if everything executed properly, false for an error
+*/
+/**************************************************************************/
+bool PN532::setTimeoutComm(uint8_t iTimeout)
+{
+    pn532_packetbuffer[0] = PN532_COMMAND_RFCONFIGURATION;
+    pn532_packetbuffer[1] = 2;    // Config item 2 (Various timings)
+    pn532_packetbuffer[2] = 0;    // RFU
+    pn532_packetbuffer[3] = 0x0B; // fATR_RES_Timeout default 102.4 ms 0x0B
+    pn532_packetbuffer[4] = iTimeout; // fRetryTimeout default 51.2 ms 0x0A
+
+    if (HAL(writeCommand)(pn532_packetbuffer, 5))
+        return 0x0;  // no ACK
+
+    return (0 <= HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
 }
 
 /**************************************************************************/
@@ -377,10 +416,10 @@ bool PN532::setRFField(uint8_t autoRFCA, uint8_t rFOnOff)
     pn532_packetbuffer[2] = 0x00 | autoRFCA | rFOnOff;  
 
     if (HAL(writeCommand)(pn532_packetbuffer, 3)) {
-        return 0x0;  // command failed
+        return false;  // command failed
     }
 
-    return (0 < HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
+    return (0 <= HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
 }
 
 /***** ISO14443A Commands ******/
@@ -393,14 +432,23 @@ bool PN532::setRFField(uint8_t autoRFCA, uint8_t rFOnOff)
 
     @returns 1 if everything executed properly, 0 for an error
 */
-bool PN532::startPassiveTargetIDDetection(uint8_t cardbaudrate) {
+bool PN532::startPassiveTargetIDDetection(uint8_t cardbaudrate, uint8_t lenbuf = 0, byte *buf = NULL) {
     pn532_packetbuffer[0] = PN532_COMMAND_INLISTPASSIVETARGET;
     pn532_packetbuffer[1] = 1; // max 1 cards at once (we can set this to 2 later)
     pn532_packetbuffer[2] = cardbaudrate;
 
-    if (HAL(writeCommand)(pn532_packetbuffer, 3)) {
-        return 0x0;  // command failed
+    uint8_t iLen = 3;
+
+    if (buf != NULL) {
+        for(int iNdx=0; iNdx<lenbuf; iNdx++, iLen++) {
+            pn532_packetbuffer[iNdx+3] = buf[iNdx];
+        }
     }
+
+    if (HAL(writeCommand)(pn532_packetbuffer, iLen)) {
+        return false;  // command failed
+    }
+    return true;
 }
 
 /**************************************************************************/
@@ -883,6 +931,9 @@ bool PN532::inDataExchange(uint8_t *send, uint8_t sendLength, uint8_t *response,
 /**************************************************************************/
 bool PN532::inCommunicateThru(uint8_t *send, uint8_t sendLength, uint8_t *response, uint8_t *responseLength)
 {
+  bool bIgnoreResp = false;
+  if(*responseLength == 0)
+      bIgnoreResp = true;
   pn532_packetbuffer[0] = PN532_COMMAND_INCOMMUNICATETHRU;
 
   if (HAL(writeCommand)(pn532_packetbuffer, 1, send, sendLength)) {
@@ -890,6 +941,8 @@ bool PN532::inCommunicateThru(uint8_t *send, uint8_t sendLength, uint8_t *respon
   }
 
   int16_t status = HAL(readResponse)(response, *responseLength, 1000);
+  if(bIgnoreResp)
+      return true;
   if (status < 0) {
     return false;
   }

@@ -3,7 +3,7 @@
 #define __PN532_SPI_H__
 
 #include <SPI.h>
-#include "PN532/PN532/PN532Interface.h"
+#include "PN532Interface.h"
 
 class PN532_SPI : public PN532Interface
 {

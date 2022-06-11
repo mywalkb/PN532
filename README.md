@@ -1,5 +1,7 @@
 ## NFC library 
 
+This library is forked by [Seeed-Studio/PN532](https://github.com/Seeed-Studio/PN532)
+
 This is an library for PN532 to use NFC technology.
 It is for [NFC Shield](http://goo.gl/Cac2OH) and [Grove - NFC](http://goo.gl/L3Uw5G).
 
@@ -30,7 +32,7 @@ It is for [NFC Shield](http://goo.gl/Cac2OH) and [Grove - NFC](http://goo.gl/L3U
   1. Get PN532 library and NDEF library
 
           cd {Arduino}\libraries  
-          git clone --recursive https://github.com/Seeed-Studio/PN532.git NFC
+          git clone --recursive https://github.com/mywalkb/PN532.git NFC
           ln -s NFC/PN532 ./
           ln -s NFC/PN532_SPI ./
           ln -s NFC/PN532_I2C ./
@@ -86,3 +88,6 @@ If your Arduino has only one serial interface and you want to keep it for contro
 [Leonardo]: http://arduino.cc/en/Main/arduinoBoardLeonardo
 [SoftwareSerial]: https://www.arduino.cc/en/Reference/softwareSerial
 
+## Credits
+
+- [Seeed-Studio/PN532](https://github.com/Seeed-Studio/PN532) forked source

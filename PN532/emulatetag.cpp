@@ -78,6 +78,24 @@ void EmulateTag::setUid(uint8_t *uid)
 
 bool EmulateTag::emulate(const uint16_t tgInitAsTargetTimeout)
 {
+    pn532.writeRegister(REG_CIU_RxMode, 0x80); // no accept invalid frame, no accept multiple frames, CRC enabled, rx speed 106 kbits
+    pn532.writeRegister(REG_CIU_TxMode, 0x80); // CRC enabled, tx speed 106 kbits
+
+    pn532.setRFField(0, 0);
+
+    uint8_t prev = pn532.readRegister(REG_CIU_Status2);
+    prev = bitClear(prev, 3); // disable CRYPTO1
+    pn532.writeRegister(REG_CIU_Status2, prev);
+
+    prev = pn532.readRegister(REG_CIU_ManualRCV);
+    prev = bitClear(prev, 4); // disable ParityDisable
+    pn532.writeRegister(REG_CIU_ManualRCV, prev);
+
+    prev = pn532.readRegister(REG_CIU_TxAuto);
+    prev = bitSet(prev, 2); // enable InitialRFOn
+    pn532.writeRegister(REG_CIU_TxAuto, prev);
+
+    pn532.setParameters(0x30 ); // enable fAutomaticRATS, fISO14443-4_PICC
 
   uint8_t command[] = {
       PN532_COMMAND_TGINITASTARGET,

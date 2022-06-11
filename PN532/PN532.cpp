@@ -519,6 +519,39 @@ bool PN532::readPassiveTargetID(uint8_t cardbaudrate, uint8_t *uid, uint8_t *uid
     return 1;
 }
 
+/**************************************************************************/
+/*!
+    set internal parameters of the PN532, and then to configure its behavior
+    regarding different cases.
+
+    @param  Flags
+    - bit 0: fNADUsed Use of the NAD information in case of initiator
+                      configuration (DEP and ISO/IEC14443-4 PCD).
+    - bit 1: fDIDUsed Use of the DID information in case of initiator
+                      configuration (or CID in case of ISO/IEC14443-4 PCD
+                      configuration).
+    - bit 2: fAutomaticATR_RES Automatic generation of the ATR_RES in case of
+                               target configuration.
+    - bit 3: RFU Must be set to 0
+    - bit 4: fAutomaticRATS Automatic generation of the RATS in case of
+                            ISO/IEC14443-4 PCD mode.
+    - bit 5: fISO14443-4_PICC The emulation of a ISO/IEC14443-4 PICC is enabled.
+    - bit 6: fRemovePrePostAmble The PN532 does not send Preamble and Postamble.
+    - bit 7: RFU Must be set to 0.
+
+    @returns true if everything executed properly, false for an error
+*/
+/**************************************************************************/
+bool PN532::setParameters(uint8_t iFlags)
+{
+    pn532_packetbuffer[0] = PN532_COMMAND_SETPARAMETERS;
+    pn532_packetbuffer[1] = iFlags;
+
+    if (HAL(writeCommand)(pn532_packetbuffer, 2))
+        return false;  // no ACK
+
+    return (0 <= HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer)));
+}
 
 /***** Mifare Classic Functions ******/
 

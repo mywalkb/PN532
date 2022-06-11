@@ -1,16 +1,16 @@
-#include "PN532/PN532/emulatetag.h"
-#include "NdefMessage.h"
+#include <emulatetag.h>
+#include "NdefMessage.h" // Require library don/NDEF from github.com
 
-#if 0
+#if 1
 #include <SPI.h>
-#include <PN532/PN532/PN532_SPI.h>
-#include "PN532/PN532/PN532.h"
+#include <PN532_SPI.h>
+#include <PN532.h>
 
-  PN532_SPI pn532spi(SPI, 10);
-  EmulateTag nfc(pn532spi);
-#elif 1
-#include <PN532/PN532/PN532_HSU.h>
-#include <PN532/PN532/PN532.h>
+PN532_SPI pn532spi(SPI, 10);
+EmulateTag nfc(pn532spi);
+#elif 0
+#include <PN532_HSU.h>
+#include <PN532.h>
 
 PN532_HSU pn532hsu(Serial1);
 EmulateTag nfc(pn532hsu);
@@ -33,9 +33,7 @@ void setup()
   if (messageSize > sizeof(ndefBuf))
   {
     Serial.println("ndefBuf is too small");
-    while (1)
-    {
-    }
+    while (1);
   }
 
   Serial.print("Ndef encoded message size: ");
@@ -58,7 +56,7 @@ void loop()
   //nfc.setNdefFile(ndefBuf, messageSize);
 
   // start emulation (blocks)
-  nfc.emulate();
+  nfc.emulate(5000);
 
   // or start emulation with timeout
   /*if(!nfc.emulate(1000)){ // timeout 1 second

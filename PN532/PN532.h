@@ -57,9 +57,11 @@
 #define REG_CIU_TxMode     0x6302 // Defines the transmission data rate and framing during transmission.
 #define REG_CIU_RxMode     0x6303 // Defines the reception data rate and framing during receiving
 #define REG_CIU_TxControl  0x6304 // Controls the logical behavior of the antenna driver pins TX1 and TX2.
-#define REG_CIU_Command    0x6331 // Starts and stops the command execution
 #define REG_CIU_TxAuto     0x6305 // Controls the setting of the antenna driver
+#define REG_CIU_Command    0x6331 // Starts and stops the command execution
+#define REG_CIU_Status2    0x6338 // Contain status flags of the receiver, transmitter and Data Mode Detector
 #define REG_CIU_Control    0x633C // Contains miscellaneous control bits
+#define REG_CIU_ManualRCV  0x630D // Allows manual fine tuning of the internal receiver
 
 // nfc mode
 #define ISO1443A 0x00
@@ -163,6 +165,7 @@ public:
     bool setRFField(uint8_t autoRFCA, uint8_t rFOnOff);
     bool powerDownMode();
     bool setTimeoutComm(uint8_t iTimeout);
+    bool setParameters(uint8_t iFlag);
 
     /**
     * @brief    Init PN532 as a target

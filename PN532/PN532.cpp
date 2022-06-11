@@ -1035,9 +1035,9 @@ bool PN532::inListPassiveTarget()
     return true;
 }
 
-int8_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, uint8_t *mode, uint8_t *initiatorcommand, const uint16_t timeout){
+int16_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, uint8_t *mode, uint8_t *initiatorcommand, const uint16_t timeout){
   
-  int8_t status = HAL(writeCommand)(command, len);
+    int16_t status = HAL(writeCommand)(command, len);
     if (status < 0) {
         return -1;
     }
@@ -1046,7 +1046,7 @@ int8_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, uint8_t 
     if (status > 0) {
         if (mode != NULL) mode[0] = pn532_packetbuffer[0];
         if (initiatorcommand != NULL) memcpy(initiatorcommand, &pn532_packetbuffer[1], status-1);
-        return 1;
+        return status - 1;
     } else if (PN532_TIMEOUT == status) {
         return 0;
     } else {
@@ -1057,7 +1057,7 @@ int8_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, uint8_t 
 /**
  * Peer to Peer
  */
-int8_t PN532::tgInitAsTarget(uint16_t timeout)
+int16_t PN532::tgInitAsTarget(uint16_t timeout)
 {
     const uint8_t command[] = {
         PN532_COMMAND_TGINITASTARGET,
@@ -1153,7 +1153,7 @@ int16_t PN532::inRelease(const uint8_t relevantTarget){
     return HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
 }
 
-bool PN532::tgResponseToInitiator(const uint8_t *data_out, uint8_t len)
+int16_t PN532::tgResponseToInitiator(const uint8_t *data_out, uint8_t len, const uint16_t timeout)
 {
     pn532_packetbuffer[0] = PN532_COMMAND_TGRESPONSETOINITIATOR;
     memcpy(pn532_packetbuffer+1, data_out, len);
@@ -1163,25 +1163,24 @@ bool PN532::tgResponseToInitiator(const uint8_t *data_out, uint8_t len)
     }
 
     // read data packet
-    return HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
+    return HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer), timeout);
 }
 
-bool PN532::tgGetInitiatorCommand(uint8_t *data_in, uint8_t *len)
+int16_t PN532::tgGetInitiatorCommand(uint8_t *data_in, uint8_t len, const uint16_t timeout)
 {
     pn532_packetbuffer[0] = PN532_COMMAND_TGGETINITIATORCOMMAND;
 
     if (HAL(writeCommand)(pn532_packetbuffer, 1)) {
         return false;
     }
-    uint8_t lenres = HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
+    int16_t lenres = HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer), timeout);
     if (lenres > 0) {
         if (pn532_packetbuffer[0] == 0) {
             memcpy(data_in, pn532_packetbuffer+1, lenres-1);
-            *len = lenres-1;
-            return true;
+            return lenres-1;
         }
     }
-    return false;
+    return -1;
 }
 
 /***** FeliCa Functions ******/

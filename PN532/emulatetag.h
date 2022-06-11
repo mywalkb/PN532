@@ -25,13 +25,15 @@ typedef enum
 
 class EmulateTag
 {
+  using ProcessEmulEvent = uint8_t (*)(uint8_t*, uint8_t*, uint8_t *, uint8_t);
 
 public:
   EmulateTag(PN532Interface &interface) : pn532(interface), uidPtr(0), tagWrittenByInitiator(false), tagWriteable(true), updateNdefCallback(0) {}
 
   bool init();
 
-  bool emulate(const uint16_t tgInitAsTargetTimeout = 0);
+  int8_t emulate(const uint16_t tgInitAsTargetTimeout = 0);
+  int8_t emulate(ProcessEmulEvent, const uint16_t tgInitAsTargetTimeout = 0);
 
   /*
    * @param uid pointer to byte array of length 3 (uid is 4 bytes - first byte is fixed) or zero for uid 

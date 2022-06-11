@@ -175,12 +175,14 @@ public:
     *           < 0     failed
     */
     int8_t tgInitAsTarget(uint16_t timeout = 0);
-    int8_t tgInitAsTarget(const uint8_t* command, const uint8_t len, const uint16_t timeout = 0);
+    int8_t tgInitAsTarget(const uint8_t* command, const uint8_t len, uint8_t *mode, uint8_t *initiatorcommand, const uint16_t timeout = 0);
 
     int16_t tgGetData(uint8_t *buf, uint8_t len);
     bool tgSetData(const uint8_t *header, uint8_t hlen, const uint8_t *body = 0, uint8_t blen = 0);
 
     int16_t inRelease(const uint8_t relevantTarget = 0);
+    bool tgResponseToInitiator(const uint8_t *data_out, uint8_t len);
+    bool tgGetInitiatorCommand(uint8_t *data_in, uint8_t *len);
 
     // ISO14443A/B functions
     bool inListPassiveTarget();

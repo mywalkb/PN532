@@ -95,15 +95,15 @@ bool EmulateTag::emulate(const uint16_t tgInitAsTargetTimeout)
     prev = bitSet(prev, 2); // enable InitialRFOn
     pn532.writeRegister(REG_CIU_TxAuto, prev);
 
-    pn532.setParameters(0x30 ); // enable fAutomaticRATS, fISO14443-4_PICC
+    pn532.setParameters(0x10); // enable fAutomaticRATS
 
   uint8_t command[] = {
       PN532_COMMAND_TGINITASTARGET,
-      5, // MODE: PICC only, Passive only
+      1, // MODE: Passive only
 
       0x04, 0x00,       // SENS_RES
       0x00, 0x00, 0x00, // NFCID1
-      0x20,             // SEL_RES
+      0x00,             // SEL_RES
 
       0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, // FeliCaParams
@@ -115,35 +115,66 @@ bool EmulateTag::emulate(const uint16_t tgInitAsTargetTimeout)
       0  // length of historical bytes
   };
 
+  uint8_t memory_area[] = {
+  0x00, 0x00, 0x00, 0x00,  // Block 0
+  0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0xFF, 0xFF,  // Block 2 (Static lock bytes: CC area and data area are read-only locked)
+  0xE1, 0x10, 0x06, 0x0F,  // Block 3 (CC - NFC-Forum Tag Type 2 version 1.0, Data area (from block 4 to the end) is 48 bytes, Read-only mode)
+
+  0x03, 33,   0xd1, 0x02,  // Block 4 (NDEF)
+  0x1c, 0x53, 0x70, 0x91,
+  0x01, 0x09, 0x54, 0x02,
+  0x65, 0x6e, 0x4c, 0x69,
+
+  0x62, 0x6e, 0x66, 0x63,
+  0x51, 0x01, 0x0b, 0x55,
+  0x03, 0x6c, 0x69, 0x62,
+  0x6e, 0x66, 0x63, 0x2e,
+
+  0x6f, 0x72, 0x67, 0x00,
+  0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00,
+};
+
   if (uidPtr != 0)
   { // if uid is set copy 3 bytes to nfcid1
     memcpy(command + 4, uidPtr, 3);
   }
 
-  if (1 != pn532.tgInitAsTarget(command, sizeof(command), tgInitAsTargetTimeout))
+  uint8_t mode;
+  uint8_t initiatorcommand[16];
+
+  if (1 != pn532.tgInitAsTarget(command, sizeof(command), &mode, initiatorcommand, tgInitAsTargetTimeout))
   {
     DMSG("tgInitAsTarget failed or timed out!");
     return false;
   }
 
-  uint8_t compatibility_container[] = {
-      0, 0x0F,
-      0x20,
-      0, 0x54,
-      0, 0xFF,
-      0x04,                                                        // T
-      0x06,                                                        // L
-      0xE1, 0x04,                                                  // File identifier
-      ((NDEF_MAX_LENGTH & 0xFF00) >> 8), (NDEF_MAX_LENGTH & 0xFF), // maximum NDEF file size
-      0x00,                                                        // read access 0x0 = granted
-      0x00                                                         // write access 0x0 = granted | 0xFF = deny
-  };
+  uint8_t cmd = initiatorcommand[0];
+  uint8_t block = initiatorcommand[1];
 
-  if (tagWriteable == false)
-  {
-    compatibility_container[14] = 0xFF;
+  uint8_t data_out[16];
+
+  while (true) {
+      if (cmd == 0x30) { // READ
+          memcpy(data_out, memory_area + (block * 4), 16);
+          pn532.tgResponseToInitiator(data_out, sizeof(data_out));
+      } else if (cmd == 0x50) { // HALT
+          break;
+      } else {
+          break;
+      }
+      uint8_t len;
+      if (pn532.tgGetInitiatorCommand(initiatorcommand, &len) && len>=2) {
+          cmd = initiatorcommand[0];
+          block = initiatorcommand[1];
+      } else {
+          break;
+      }
   }
 
+/*
   tagWrittenByInitiator = false;
 
   uint8_t rwbuf[128];
@@ -152,7 +183,9 @@ bool EmulateTag::emulate(const uint16_t tgInitAsTargetTimeout)
   tag_file currentFile = NONE;
   uint16_t cc_size = sizeof(compatibility_container);
   bool runLoop = true;
+*/
 
+/*
   while (runLoop)
   {
     status = pn532.tgGetData(rwbuf, sizeof(rwbuf));
@@ -279,6 +312,7 @@ bool EmulateTag::emulate(const uint16_t tgInitAsTargetTimeout)
       return true;
     }
   }
+*/
   pn532.inRelease();
   return true;
 }

@@ -1035,7 +1035,7 @@ bool PN532::inListPassiveTarget()
     return true;
 }
 
-int8_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, const uint16_t timeout){
+int8_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, uint8_t *mode, uint8_t *initiatorcommand, const uint16_t timeout){
   
   int8_t status = HAL(writeCommand)(command, len);
     if (status < 0) {
@@ -1044,6 +1044,8 @@ int8_t PN532::tgInitAsTarget(const uint8_t* command, const uint8_t len, const ui
 
     status = HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer), timeout);
     if (status > 0) {
+        if (mode != NULL) mode[0] = pn532_packetbuffer[0];
+        if (initiatorcommand != NULL) memcpy(initiatorcommand, &pn532_packetbuffer[1], status-1);
         return 1;
     } else if (PN532_TIMEOUT == status) {
         return 0;
@@ -1073,7 +1075,7 @@ int8_t PN532::tgInitAsTarget(uint16_t timeout)
         0x0a, 0x46,  0x66, 0x6D, 0x01, 0x01, 0x10, 0x02, 0x02, 0x00, 0x80, // LLCP magic number, version parameter and MIUX
         0x00
     };
-    return tgInitAsTarget(command, sizeof(command), timeout);
+    return tgInitAsTarget(command, sizeof(command), NULL, NULL, timeout);
 }
 
 int16_t PN532::tgGetData(uint8_t *buf, uint8_t len)
@@ -1151,6 +1153,36 @@ int16_t PN532::inRelease(const uint8_t relevantTarget){
     return HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
 }
 
+bool PN532::tgResponseToInitiator(const uint8_t *data_out, uint8_t len)
+{
+    pn532_packetbuffer[0] = PN532_COMMAND_TGRESPONSETOINITIATOR;
+    memcpy(pn532_packetbuffer+1, data_out, len);
+
+    if (HAL(writeCommand)(pn532_packetbuffer, len+1)) {
+        return false;
+    }
+
+    // read data packet
+    return HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
+}
+
+bool PN532::tgGetInitiatorCommand(uint8_t *data_in, uint8_t *len)
+{
+    pn532_packetbuffer[0] = PN532_COMMAND_TGGETINITIATORCOMMAND;
+
+    if (HAL(writeCommand)(pn532_packetbuffer, 1)) {
+        return false;
+    }
+    uint8_t lenres = HAL(readResponse)(pn532_packetbuffer, sizeof(pn532_packetbuffer));
+    if (lenres > 0) {
+        if (pn532_packetbuffer[0] == 0) {
+            memcpy(data_in, pn532_packetbuffer+1, lenres-1);
+            *len = lenres-1;
+            return true;
+        }
+    }
+    return false;
+}
 
 /***** FeliCa Functions ******/
 /**************************************************************************/
